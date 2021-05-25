@@ -1,1 +1,1 @@
-# Entropy-encoding-for-IP-Source-Destination-couples.
+# Entropy-encoding-for-IP-Source-Destination-pairs.
