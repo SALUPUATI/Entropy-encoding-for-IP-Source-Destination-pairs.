@@ -294,7 +294,7 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
         print(code)
         print("\n\n")
 
-    if outpath:
+    if outpath:s
         export_graph(tree,filename=outpath+"/graph.png")
     print("Leaf number : {}".format(len(t)))
     print("Number of bits: {}".format(n_bits))
