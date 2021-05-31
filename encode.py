@@ -1,6 +1,8 @@
 import numpy as np
 import subprocess
 import argparse
+import pandas as pd
+from IPython.display import display
 # for the parser
 def str2bool(v):
     if isinstance(v, bool):
@@ -15,8 +17,9 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description="encode with huffman")
 parser.add_argument('--n_nodes', help='Node number',default=6, type=int, required=False)
+parser.add_argument('--autonomous', dest='autonomous', action='store_true')
 parser.add_argument('--verbose', type=str2bool, nargs='?',const=True, default=True,help="Print the intermediate steps")
-parser.add_argument('--outpath', default="graph.png", type=str, help='Output path for the graph image', required=False)
+parser.add_argument('--outpath', default="./", type=str, help='Output path for the graph image', required=False)
 
 def mat(n_nodes=20):
     """
@@ -47,7 +50,7 @@ def mat(n_nodes=20):
     
     return M
 
-def get_probs(mat):
+def get_probs(mat,autonomous=True):
     """
         This function computes the probability matrix
 
@@ -64,7 +67,7 @@ def get_probs(mat):
     # start variable initialization
     P = np.zeros(mat.shape)
     N = len(mat)
-    P_symbols = np.zeros(2**N)
+    #P_symbols = np.zeros(2**N)
     Na = N
     Na2 = Na**2
     a_gate = 1
@@ -75,21 +78,21 @@ def get_probs(mat):
 
     for destination in range(N):
         for source in range(N):
-            gamma_a = 1
-            gamma_c = 0
+            gamma_a = 1 if autonomous else 0.9
+            gamma_c = 0 if autonomous else 0.5
             if np.isnan(mat[destination,source]):
                 P[destination,source] = np.nan
                 continue
             if source==a_gate:
-                p = (gamma_a)*p0
+                p = (1-gamma_a)*p0
             elif destination == a_gate:
                 p = (gamma_a-gamma_c)*p1
             elif source!=a_gate and destination!=a_gate:
-                gamma_a=gamma_c=1
+                #gamma_a=gamma_c=1
                 p = (gamma_c)*p2
             P[destination,source] = p
-            P_symbols[int(mat[destination,source])] = p
-    return P,P_symbols
+            #P_symbols[int(mat[destination,source])] = p
+    return P#,P_symbols
 
 #https://stackoverflow.com/questions/11587044/how-can-i-create-a-tree-for-huffman-encoding-and-decoding
 
@@ -243,9 +246,13 @@ def sum_up_one(P):
     Pt = np.array(Pt).T
     Pt[Pt==0] = np.nan
     return Pt
+def plot_mat(M,outpath=None,is_prob=False,is_autonomous=False):
+    df = pd.DataFrame(M, columns=[str(i) for i in range(M.shape[1])])
+    if outpath:
+        df.to_csv(outpath+"/Matrix_{}_{}.csv".format("prob" if is_prob else "matrix","autonomous" if is_autonomous else "collaborative"))
+    display(df)
 
-
-def main(n_nodes=6,outpath="graph.png",verbose=False):
+def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
     """
         Executes the whole program from users input parameters
     """
@@ -253,11 +260,11 @@ def main(n_nodes=6,outpath="graph.png",verbose=False):
     print("Computing with n_nodes : {} \n".format(n_nodes))
 
     M = mat(n_nodes)
-    P = get_probs(M)[0]
+    P = get_probs(M,autonomous)#[0]
     
-    P_old = P.copy()
+    #P_old = P.copy()
 
-    P = sum_up_one(P)
+    #P = sum_up_one(P)
     freq = make_freq(P)
     #print(freq)
     vals = {l:v for (v,l) in freq}
@@ -271,15 +278,11 @@ def main(n_nodes=6,outpath="graph.png",verbose=False):
 
     if verbose:
         print("*"*20,"\n Matrix : \n ", "*"*20)
-        print(M)
+        plot_mat(M,outpath,is_prob=False,is_autonomous=autonomous)
         print("\n\n")
 
         print("*"*20,"\n Probabilities  : \n ", "*"*20)
-        print(np.round_(P_old, decimals = 4))
-        print("\n\n")
-
-        print("*"*20,"\n Probabilities col sum to 1 : \n ", "*"*20)
-        print(np.round_(P, decimals = 4))
+        plot_mat(np.round_(P, decimals = 4),outpath,is_prob=True,is_autonomous=autonomous)
         print("\n\n")
 
         print("*"*20,"\n Tree : \n ", "*"*20)
@@ -292,19 +295,13 @@ def main(n_nodes=6,outpath="graph.png",verbose=False):
         print("\n\n")
 
     if outpath:
-        export_graph(tree,filename=outpath)
+        export_graph(tree,filename=outpath+"/graph.png")
     print("Leaf number : {}".format(len(t)))
     print("Number of bits: {}".format(n_bits))
-    print("Entropy : {}".format(get_entropy(P_old)))
+    print("Entropy : {}".format(get_entropy(P)))
     print("Huffman Code length : {} ".format(n_bits/(((2**(n_nodes.bit_length()))-1)**2)))
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    main(args.n_nodes,outpath=args.outpath,verbose=args.verbose)
-
-
-
-
-
-
+    main(args.n_nodes,autonomous=args.autonomous,outpath=args.outpath,verbose=args.verbose)
 
