@@ -32,16 +32,16 @@ def mat(n_nodes=20):
         M : matrix (NxN) with N = 2 pow of the number of bits of n_nodes
 
     """
-    bit_length = n_nodes.bit_length() # recuperer le nombre de bit necessaire pour encoder le nombre
-    N = 2 ** bit_length # recuperer la taille de la matrice carré
-    M = np.array([[np.nan]*N]*N) # initialiser la matrice avec nan de taille 32*32
+    bit_length = n_nodes.bit_length() # retrieving the number of bits needed to encode the number
+    N = 2 ** bit_length # retrieving the size of the square matrix
+    M = np.array([[np.nan]*N]*N) # initializing the matrix with nan of size 32*32
     #print(M.shape) # verification
 
-    Na = N # nombre d'adresse
+    Na = N # address number
 
     for destination in range(Na):
         for source in range(Na):
-            if source == destination or source ==0 or destination==0:
+            if source == destination or source ==0 or destination==0 or source == Na-1:
                 continue
             if source > destination:
                 M[destination][source] = destination*(Na-2) + (source-1)
@@ -78,8 +78,8 @@ def get_probs(mat,autonomous=True):
 
     for destination in range(N):
         for source in range(N):
-            gamma_a = 1 if autonomous else 0.9
-            gamma_c = 0 if autonomous else 0.5
+            gamma_a = 1
+            gamma_c = 0 if autonomous else 1
             if np.isnan(mat[destination,source]):
                 P[destination,source] = np.nan
                 continue
@@ -115,14 +115,11 @@ def get_occurence(M):
     M = M.flatten()
     for i in sym:
         T.append(np.count_nonzero(M == i))
-    return T
+    return T,sym
 
-def get_entropy(M):
-    occurences = np.array(get_occurence(M))
-    probs = occurences / np.sum(occurences)
-    
+def get_entropy(codes):
+    probs = [i for i in codes.values()]
     entropy = sum([(np.log2(1/pi)*pi) for pi in probs])
-
     return entropy
 def assign_code(nodes, label, result, prefix = ''):
     """
@@ -221,9 +218,10 @@ def make_freq(P):
     P_tups = []
     for destination in range(len(P)):
         for source in range(len(P)):
-            if np.isnan(P[destination,source]):
+            if np.isnan(P[destination,source]) or P[destination,source]==0:
                 continue
             P_tups.append([P[destination,source], "{}-{}".format(destination,source)])
+    print(P_tups)
     return P_tups
 
 def get_bits(raw):
@@ -252,6 +250,15 @@ def plot_mat(M,outpath=None,is_prob=False,is_autonomous=False):
         df.to_csv(outpath+"/Matrix_{}_{}.csv".format("prob" if is_prob else "matrix","autonomous" if is_autonomous else "collaborative"))
     display(df)
 
+def get_bin_codes(vals):
+    bits = len(vals).bit_length()
+    rets = vals.copy()
+    for i,k in enumerate(vals.keys()):
+        rets[k] = np.binary_repr(i, width=bits)    
+    return rets
+
+
+
 def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
     """
         Executes the whole program from users input parameters
@@ -268,13 +275,21 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
     freq = make_freq(P)
     #print(freq)
     vals = {l:v for (v,l) in freq}
+    print(vals)
     code, tree = Huffman_code(vals)
+    codes = get_bin_codes(vals) if len(list(set(vals.values())))==1 else code
+    #if autonomous:
+
     #print(tree)
 
     t = draw_tree(tree).split("\n")
-    #print(t)
-    tx = [ get_bits(i) for i in t if "fontcolor=blue" in i]
-    n_bits = np.sum(np.array([len(i) for i in tx]))
+    #print(t) n_bits/(((2**(n_nodes.bit_length()))-1)**2)
+    #tx = [ get_bits(i) for i in t if "fontcolor=blue" in i]
+    #n_bits = np.sum(np.array([len(i) for i in tx]))
+    n_bits =sum( [ len(k) for k in codes.values()])
+    
+    code_length = sum([ len(codes[k])*vals[k] for k in vals.keys()])
+
 
     if verbose:
         print("*"*20,"\n Matrix : \n ", "*"*20)
@@ -291,15 +306,15 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
         print("\n\n")
 
         print("*"*20,"\n Codes : \n ", "*"*20)
-        print(code)
+        print(codes)
         print("\n\n")
 
-    if outpath:s
-        export_graph(tree,filename=outpath+"/graph.png")
+    #if outpath:
+    #    export_graph(tree,filename=outpath+"/graph.png")
     print("Leaf number : {}".format(len(t)))
     print("Number of bits: {}".format(n_bits))
-    print("Entropy : {}".format(get_entropy(P)))
-    print("Huffman Code length : {} ".format(n_bits/(((2**(n_nodes.bit_length()))-1)**2)))
+    print("Entropy : {}".format(get_entropy(vals)))
+    print("Huffman Code length : {} ".format(code_length))
 
 if __name__ == '__main__':
     args = parser.parse_args()
