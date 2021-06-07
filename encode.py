@@ -17,7 +17,7 @@ def str2bool(v):
 
 parser = argparse.ArgumentParser(description="encode with huffman")
 parser.add_argument('--n_nodes', help='Node number',default=6, type=int, required=False)
-parser.add_argument('--autonomous', dest='autonomous', action='store_true')
+parser.add_argument('--mode', default=0,help='Network mode (0=autonomous,1=collaborative,2=mixed)',type=int, required=False)
 parser.add_argument('--verbose', type=str2bool, nargs='?',const=True, default=True,help="Print the intermediate steps")
 parser.add_argument('--outpath', default="./", type=str, help='Output path for the graph image', required=False)
 
@@ -50,7 +50,7 @@ def mat(n_nodes=20):
     
     return M
 
-def get_probs(mat,autonomous=True):
+def get_probs(mat,network_mode=0):
     """
         This function computes the probability matrix
 
@@ -63,7 +63,9 @@ def get_probs(mat,autonomous=True):
 
     """
     # end getting symbols
-
+    
+    is_mixed = True if network_mode == 2 else False
+    is_autonomous = True if network_mode==0 else False
     # start variable initialization
     P = np.zeros(mat.shape)
     N = len(mat)
@@ -79,7 +81,11 @@ def get_probs(mat,autonomous=True):
     for destination in range(N):
         for source in range(N):
             gamma_a = 1
-            gamma_c = 0 if autonomous else 1
+            gamma_c = 0 if is_autonomous else 1
+
+            if is_mixed:
+                gamma_a = 0.9
+                gamma_c = 0.5
             if np.isnan(mat[destination,source]):
                 P[destination,source] = np.nan
                 continue
@@ -221,7 +227,6 @@ def make_freq(P):
             if np.isnan(P[destination,source]) or P[destination,source]==0:
                 continue
             P_tups.append([P[destination,source], "{}-{}".format(destination,source)])
-    print(P_tups)
     return P_tups
 
 def get_bits(raw):
@@ -244,10 +249,16 @@ def sum_up_one(P):
     Pt = np.array(Pt).T
     Pt[Pt==0] = np.nan
     return Pt
-def plot_mat(M,outpath=None,is_prob=False,is_autonomous=False):
+def plot_mat(M,outpath=None,is_prob=False,network_mode=0):
+    is_mixed = True if network_mode == 2 else False
+    is_autonomous = True if network_mode==0 else False
+
     df = pd.DataFrame(M, columns=[str(i) for i in range(M.shape[1])])
     if outpath:
-        df.to_csv(outpath+"/Matrix_{}_{}.csv".format("prob" if is_prob else "matrix","autonomous" if is_autonomous else "collaborative"))
+        if not is_mixed:
+            df.to_csv(outpath+"/Matrix_{}_{}.csv".format("prob" if is_prob else "matrix","autonomous" if is_autonomous else "collaborative"))
+        else:
+            df.to_csv(outpath+"/Matrix_{}_{}.csv".format("prob" if is_prob else "matrix","mixed"))
     display(df)
 
 def get_bin_codes(vals):
@@ -259,7 +270,7 @@ def get_bin_codes(vals):
 
 
 
-def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
+def main(n_nodes=6,network_mode=3,outpath="graph.png",verbose=False):
     """
         Executes the whole program from users input parameters
     """
@@ -267,7 +278,7 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
     print("Computing with n_nodes : {} \n".format(n_nodes))
 
     M = mat(n_nodes)
-    P = get_probs(M,autonomous)#[0]
+    P = get_probs(M,network_mode)#[0]
     
     #P_old = P.copy()
 
@@ -275,9 +286,9 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
     freq = make_freq(P)
     #print(freq)
     vals = {l:v for (v,l) in freq}
-    print(vals)
-    code, tree = Huffman_code(vals)
-    codes = get_bin_codes(vals) if len(list(set(vals.values())))==1 else code
+    #print(vals)
+    codes, tree = Huffman_code(vals)
+    #codes = get_bin_codes(vals) if len(list(set(vals.values())))==1 else code
     #if autonomous:
 
     #print(tree)
@@ -293,30 +304,30 @@ def main(n_nodes=6,autonomous=True,outpath="graph.png",verbose=False):
 
     if verbose:
         print("*"*20,"\n Matrix : \n ", "*"*20)
-        plot_mat(M,outpath,is_prob=False,is_autonomous=autonomous)
+        plot_mat(M,outpath,is_prob=False,network_mode=network_mode)
         print("\n\n")
 
         print("*"*20,"\n Probabilities  : \n ", "*"*20)
-        plot_mat(np.round_(P, decimals = 4),outpath,is_prob=True,is_autonomous=autonomous)
+        plot_mat(np.round_(P, decimals = 4),outpath,is_prob=True,network_mode=network_mode)
         print("\n\n")
 
-        print("*"*20,"\n Tree : \n ", "*"*20)
+        print("*"*20,"\n Huffman tree : \n ", "*"*20)
         print(tree)
         #print(t)
         print("\n\n")
 
-        print("*"*20,"\n Codes : \n ", "*"*20)
+        print("*"*20,"\n Code dictionary : \n ", "*"*20)
         print(codes)
         print("\n\n")
 
-    #if outpath:
-    #    export_graph(tree,filename=outpath+"/graph.png")
+    if outpath:
+        export_graph(tree,filename=outpath+"/graph.png")
     print("Leaf number : {}".format(len(t)))
-    print("Number of bits: {}".format(n_bits))
+    print("Huffman code : {}".format(n_bits))
     print("Entropy : {}".format(get_entropy(vals)))
     print("Huffman Code length : {} ".format(code_length))
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    main(args.n_nodes,autonomous=args.autonomous,outpath=args.outpath,verbose=args.verbose)
+    main(args.n_nodes,network_mode=args.mode,outpath=args.outpath,verbose=args.verbose)
 
