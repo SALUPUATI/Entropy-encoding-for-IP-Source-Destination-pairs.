@@ -5,9 +5,9 @@ The goal of this work is to be able to compress the frame to allow the transit o
 
 We considered a star topology, with variable nodes, by doing a Source-Destination IP address pairing.
 
-Steps to follow:
+## Steps to follow:
 
-HUFFMAN CODING
+# HUFFMAN CODING
 
 1. First, we created the source-destination symbol matrix;
 2. Next, created a probability distribution of the source-destination symbols in our matrix, and scaled this probability distribution so that we have a sum of 1 at the transmission, considering our star topology; 
