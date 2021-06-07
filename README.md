@@ -30,6 +30,6 @@ We have three running modes (autonomous network, collaborative network and mixed
 
         # python3 encode.py --n_nodes=6 or 8 till 32 --verbose=true --mode=2
 
-Thanks
+Enjoy
        
 
