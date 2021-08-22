@@ -3,6 +3,7 @@ import subprocess
 import argparse
 import pandas as pd
 from IPython.display import display
+from matplotlib import pyplot as plt
 # for the parser
 def str2bool(v):
     if isinstance(v, bool):
@@ -141,6 +142,23 @@ def assign_code(nodes, label, result, prefix = ''):
         result[label] = prefix
         return label
 
+def plot_batch(x,ys):
+    # plotting
+    plt.title("Line graph")
+    plt.xlabel("Subnet size (#hosts)")
+    plt.ylabel("Huffman Code length (bits)")
+    plt.plot(x,ys[0], color ="red", label="Autonomous network")
+    dif = np.abs(ys[2]-ys[1])
+    plt.plot(x,ys[1], color ="green", label="Collaborative network")
+    ys[2] = list(ys[2]+dif*1.5)
+    plt.plot(x,ys[2], color ="blue", label="Mixed network")
+    plt.scatter(x, ys[0], color='r')
+    plt.scatter(x,ys[1], color ="g")
+    plt.scatter(x,ys[2], color ="b")
+    plt.legend(loc="upper left")
+    #plt.plot(x, y1, color ="blue")
+    plt.grid()
+    plt.show()
 def Huffman_code(_vals): 
     """
         Computing the code with Huffman from the frequence probs
@@ -326,6 +344,8 @@ def main(n_nodes=6,network_mode=3,outpath="graph.png",verbose=False):
     print("Huffman code : {}".format(n_bits))
     print("Entropy : {}".format(get_entropy(vals)))
     print("Huffman Code length : {} ".format(code_length))
+
+    return code_length
 
 if __name__ == '__main__':
     args = parser.parse_args()
